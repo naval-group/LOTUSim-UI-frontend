@@ -33,6 +33,7 @@ import { listScenarios, listInstances, spawnVesselOnInstance } from '../common/a
 import { WebSocketClient } from "../common/websocket";
 import { VesselData } from "../common/interfaces";
 import { LatLongPosition } from "../common/interfaces";
+import { saveInstance } from '../common/apis';
 
 /**
  * HomeDashboard Component
@@ -80,6 +81,8 @@ export const HomeDashboard: React.FC = () => {
             const instances = await listInstances();
             setInstances(instances);
             setScenarios(scenarios);
+            setSelectedInstance("lotusim");
+            saveInstance("lotusim");
         } catch (err) {
             console.error("Error getting instance or scenario");
         }
