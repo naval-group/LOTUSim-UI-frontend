@@ -25,13 +25,20 @@
  *
  */
 
-import React from "react";
-import { ClickAwayListener, Paper, List, ListItem, ListItemButton, ListItemText } from "@mui/material";
+import React from 'react';
+import {
+  ClickAwayListener,
+  Paper,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+} from '@mui/material';
 
 interface Props {
-    position: { x: number; y: number };
-    onAdd: () => void;
-    onClose: () => void;
+  position: { x: number; y: number };
+  onAdd: () => void;
+  onClose: () => void;
 }
 
 /**
@@ -41,20 +48,23 @@ interface Props {
  * Positioned absolutely at the clicked location on the map.
  */
 export const MapContextMenu: React.FC<Props> = ({ position, onAdd, onClose }) => (
-    <ClickAwayListener onClickAway={onClose}>
-        <Paper elevation={3} style={{ position: "absolute", top: position.y, left: position.x, zIndex: 1000 }}>
-            <List component="nav">
-                <ListItem>
-                    <ListItemButton onClick={onAdd}>
-                        <ListItemText primary="Add Vessel" />
-                    </ListItemButton>
-                </ListItem>
-                <ListItem>
-                    <ListItemButton onClick={onClose}>
-                        <ListItemText primary="Cancel" />
-                    </ListItemButton>
-                </ListItem>
-            </List>
-        </Paper>
-    </ClickAwayListener>
+  <ClickAwayListener onClickAway={onClose}>
+    <Paper
+      elevation={3}
+      style={{ position: 'absolute', top: position.y, left: position.x, zIndex: 1000 }}
+    >
+      <List component="nav">
+        <ListItem>
+          <ListItemButton onClick={onAdd}>
+            <ListItemText primary="Add Vessel" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem>
+          <ListItemButton onClick={onClose}>
+            <ListItemText primary="Cancel" />
+          </ListItemButton>
+        </ListItem>
+      </List>
+    </Paper>
+  </ClickAwayListener>
 );
