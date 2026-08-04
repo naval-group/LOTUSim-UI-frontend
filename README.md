@@ -1,41 +1,62 @@
-# Lotusim_UI
+# Lotusim UI - Frontend
 
-The goal for this UI is for user to easily interact with the Lotusim system.
+A web application for interacting with LOTUSim without needing to hand-write YAML/SDF or script against ROS 2 directly: : creating and launching scenarios, and managing models.
 
-The UI is based on REACT framework.
+Built with **React** + **Vite** + **Node.js**.
 
-The UI is interfacing with a backend and if user choose not to use this UI, feel free to interact with the backend server API or even directly with ROS2 topics.
+The UI talks to the [LOTUSim UI backend](https://github.com/naval-group/LOTUSim-UI-backend) over a REST API, with real-time position updates over WebSocket. If you'd rather not use the UI at all, you can interact with the backend's API directly, or bypass both and talk to LOTUSim's ROS 2 topics/services yourself.
+
+---
 
 ## Getting started
 
-Starting [backend](https://github.com/naval-group/LOTUSim-UI-backend)
+**1. Start the backend** (see the [backend README](https://github.com/naval-group/LOTUSim-UI-backend) for full setup):
 
 ```shell
 npm install
 npx ts-node src/main.ts
 ```
 
-Starting frontend
+**2. Start the frontend:**
 
 ```shell
 npm install
 npm run dev
 ```
 
-## Functions
+**3. Open the UI** at [http://localhost:5173](http://localhost:5173).
+ 
+> This assumes LOTUSim itself is already installed and running (`lotusim run`) - see [Getting Started](https://github.com/naval-group/LOTUSim/wiki/getting-started) on the main LOTUSim wiki if you haven't set that up yet.
 
-1. Instance (**TBD**) : The backend server will be capable of launching different Lotusim Instance on it. User will be able to use UI to create new instance.
+---
 
-2. Models (**TBD**) : The user will be able to create models.
+## Features
+ 
+| Feature | Status |
+|---|---|
+| **Home** | ✅ Implemented - geographic world map |
+| **Scenarios** | ✅ Implemented - create, edit, save, and launch scenarios with multiple vessels, each with different plugins configured per vessel |
+| **Models** | ✅ Implemented - add/remove/edit models in the database. You can also enter high-level specs. Long term goal: have the UI generate the xdyn/Gazebo/Unity config automatically |
+| **Instance** | You can chose which running instance of LOTUSim to load. 📋 Planned - launching multiple independent LOTUSim instances from the UI |
+ 
+For the full step-by-step walkthrough of building and launching a scenario through this UI, see the [Tutorial](https://github.com/naval-group/LOTUSim/wiki). The short version:
+ 
+1. `lotusim run` + `lotusim ui`, then open the **Scenarios** tab → **+**
+2. Fill in scenario details, then right-click the map to add a vessel
+3. Pick a model, enable the plugins it needs (Rendering / Physics / Waypoint Follower), configure each
+4. Save, then start `xdyn-for-cs` per vessel using the Physics Engine plugin, and launch the scenario from **Home**
+---
 
-3. Scenario (**TBD**) : The user will be able to create scenario with multiple vessel.
+## Scenario Model
+ 
+A scenario consists of vessel **name**, **position**, and **model**. Individual models can't be edited per-scenario, by design, to avoid drift between what's tested and what's deployed. If you need a variant of an existing model (e.g. the same hull with a different sensor loadout), create a **separate model** for it instead of editing one in place.
+ 
+**Environment settings (wave/wind/current) are not tied to a scenario** - they're set once on the **Home** screen instead, so the same scenario can be re-run against different environmental conditions without duplicating it.
+ 
+---
 
-4. Launching scenario (**TBD**) : The user will be able to launch scenario in the UI
+## Related
 
-## Scenario
-
-Scenario consist of Vessels name, position and models. The individual model will not be allowed to be change to reduce complication. If similar models with different sensors are used, please create a seperate model for it.
-
-Environment variables will not be tied to scenario to allow scenario to run in different environments.
-
-Instead environment will be set in the Home screen.
+- [LOTUSim](https://github.com/naval-group/LOTUSim) - the core simulator this UI drives
+- [LOTUSim UI Backend](https://github.com/naval-group/LOTUSim-UI-backend) - REST/WebSocket server this frontend talks to
+- [Full documentation (wiki)](https://github.com/naval-group/LOTUSim/wiki)
