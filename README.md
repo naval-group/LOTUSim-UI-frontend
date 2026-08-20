@@ -5,7 +5,14 @@ Built with React + Vite + Node.js.
 
 The UI talks to the [LOTUSim UI backend](https://github.com/naval-group/LOTUSim-UI-backend) over a REST API, with real-time position updates over WebSocket. If you'd rather not use the UI at all, you can interact with the backend's API directly, or bypass both and talk to LOTUSim's ROS 2 topics/services yourself.
 
+This assumes LOTUSim itself is already installed and running (`lotusim run`) - see [Getting Started](https://github.com/naval-group/LOTUSim/wiki/getting-started) on the main LOTUSim wiki if you haven't set that up yet.
+
+---
+
 ## Getting started
+There are 2 ways to run the frontend: **npm** (all you need is Node.js), or **Nix** (no Node install required, and reproducible across machines). Pick one.
+
+### Option A - npm
 
 **1. Start the backend** (see the [backend README](https://github.com/naval-group/LOTUSim-UI-backend) for full setup):
 
@@ -23,18 +30,53 @@ npm run dev
 
 **3. Open your browser** at [http://localhost:5173](http://localhost:5173).
  
-This assumes LOTUSim itself is already installed and running (`lotusim run`) - see [Getting Started](https://github.com/naval-group/LOTUSim/wiki/getting-started) on the main LOTUSim wiki if you haven't set that up yet.
-
-## Nix
+### Option B - Nix
 
 The repo is also a flake, so it builds and runs without a separately installed Node:
 
 ```shell
 nix run .                    # static build served on :8080, SPA routing included
+```
+This builds the frontend and serves it on [http://localhost:8080](http://localhost:8080) (override with `PORT=<port> nix run .`).
+
+For local development, use the dev shell, which just gives you Node 22, the rest is the same as Option A:
+
+```shell
+nix develop
+npm install
+npm run dev
+```
+Open the UI at [http://localhost:5173](http://localhost:5173).
+
+---
+## Building from source (Nix)
+ 
+This section is only relevant if you're using the Nix path and want to know what it's doing, or need to troubleshoot it. If Option A or Option B above worked for you, you can skip this.
+ 
+### Enabling flakes
+ 
+Flakes are not on by default. Pick one:
+ 
+1- Enable them yourself, add this to `~/.config/nix/nix.conf`:
+ 
+```
+experimental-features = nix-command flakes
+```
+ 
+2- Or use [direnv](https://direnv.net/), which reads the repo's `.envrc` automatically:
+ 
+```shell
+direnv allow
+```
+
+### Other Nix outputs
+```shell
 nix build .#dist             # just the dist/ output
+nix build .                  # the runnable server package, in ./result
 nix develop                  # Node 22 for npm install / npm run dev
 ```
 
+### What `nix run .` does
 `nix run .` serves the same production build the `Dockerfile` ships, backed by `static-web-server` instead of nginx, with the SPA fallback (`--page-fallback`) that client-side routing needs. Override the port with `PORT`:
 ```shell
 PORT=3000 nix run .
@@ -42,6 +84,7 @@ PORT=3000 nix run .
 
 As part of [`naval-group/LOTUSim`](https://github.com/naval-group/LOTUSim), this flake is also exposed as `packages.ui-frontend` / `apps.ui-frontend` there, and combined with the backend under `apps.ui`.
 
+---
 ## Features
  
 | Feature | Status |
@@ -57,6 +100,7 @@ For the full step-by-step walkthrough of building and launching a scenario throu
 2. Fill in scenario details, then right-click the map to add a vessel
 3. Pick a model, enable the plugins it needs (Rendering / Physics / Waypoint Follower), configure each
 4. Save, then start `xdyn-for-cs` per vessel using the Physics Engine plugin, and launch the scenario from **Home**
+---
 
 ## Scenario Model
  
