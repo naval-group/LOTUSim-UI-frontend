@@ -11,9 +11,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useScenarioEditor } from './useScenarioEditor';
 import * as api from '../../services/api';
+import { Agent } from '../../types';
+
+// The hook navigates back to the list after a save: useNavigate() needs a
+// router, so it is replaced by a spy.
+const mockNavigate = vi.hoisted(() => vi.fn());
+vi.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate }));
 
 vi.mock('../../services/api');
 const mockedApi = vi.mocked(api);
+
+const makeAgent = (name: string, model: string, latitude: number, longitude: number, heading: number) =>
+  new Agent({ name, model, position: { latitude, longitude, altitude: 0 }, heading });
 
 const mockScenario = {
   filename: 'test-scenario',
@@ -25,9 +34,7 @@ const mockScenario = {
   timeOfDay: '12:00',
   date: '2024-01-01',
   referencePosition: { latitude: 1.24, longitude: 103.72, altitude: 0 },
-  agents: new Map([
-    ['vessel_1', { name: 'vessel_1', model: 'usv', position: { latitude: 1.24, longitude: 103.72, altitude: 0 }, heading: 45 }],
-  ]),
+  agents: new Map([['vessel_1', makeAgent('vessel_1', 'usv', 1.24, 103.72, 45)]]),
 };
 
 beforeEach(() => {
@@ -73,7 +80,7 @@ describe('useScenarioEditor — new scenario', () => {
 
 describe('useScenarioEditor — existing scenario', () => {
   it('loads scenario data on mount', async () => {
-    mockedApi.getScenario = vi.fn().mockResolvedValue(mockScenario);
+    mockedApi.getScenario.mockResolvedValue(mockScenario);
 
     const { result } = renderHook(() => useScenarioEditor('test-scenario'));
 
@@ -91,7 +98,7 @@ describe('useScenarioEditor — existing scenario', () => {
   });
 
   it('sets error when load fails', async () => {
-    mockedApi.getScenario = vi.fn().mockRejectedValue(new Error('Network error'));
+    mockedApi.getScenario.mockRejectedValue(new Error('Network error'));
 
     const { result } = renderHook(() => useScenarioEditor('test-scenario'));
     await act(async () => {});
@@ -101,15 +108,15 @@ describe('useScenarioEditor — existing scenario', () => {
   });
 
   it('decodes URI-encoded scenario name', () => {
-    mockedApi.getScenario = vi.fn().mockResolvedValue(mockScenario);
+    mockedApi.getScenario.mockResolvedValue(mockScenario);
     const { result } = renderHook(() => useScenarioEditor('test%20scenario'));
     expect(result.current.filename).toBe('test scenario');
   });
 
   it('keeps filename and name independent when they differ', async () => {
     const scenario = { ...mockScenario, filename: 'demo_scenario', name: 'Demo' };
-    mockedApi.getScenario = vi.fn().mockResolvedValue(scenario);
-    mockedApi.updateScenario = vi.fn().mockResolvedValue({ success: true, message: 'ok' });
+    mockedApi.getScenario.mockResolvedValue(scenario);
+    mockedApi.updateScenario.mockResolvedValue({ success: true, message: 'ok' });
 
     const { result } = renderHook(() => useScenarioEditor('demo_scenario'));
     await act(async () => {});
@@ -130,12 +137,7 @@ describe('useScenarioEditor — addAgent', () => {
     const { result } = renderHook(() => useScenarioEditor('s', { isNew: true }));
 
     act(() => {
-      result.current.addAgent(
-        'usv',
-        'vessel_2',
-        { vesselName: 'vessel_2', geoPoint: { latitude: 1.3, longitude: 103.8, altitude: 0 }, heading: 90 },
-        ''
-      );
+      result.current.addAgent(makeAgent('vessel_2', 'usv', 1.3, 103.8, 90));
     });
 
     expect(result.current.agents.size).toBe(1);
@@ -149,8 +151,8 @@ describe('useScenarioEditor — addAgent', () => {
     const { result } = renderHook(() => useScenarioEditor('s', { isNew: true }));
 
     act(() => {
-      result.current.addAgent('usv', 'vessel_1', { vesselName: 'vessel_1', geoPoint: { latitude: 1.0, longitude: 103.0, altitude: 0 }, heading: 0 }, '');
-      result.current.addAgent('asv', 'vessel_1', { vesselName: 'vessel_1', geoPoint: { latitude: 2.0, longitude: 104.0, altitude: 0 }, heading: 10 }, '');
+      result.current.addAgent(makeAgent('vessel_1', 'usv', 1.0, 103.0, 0));
+      result.current.addAgent(makeAgent('vessel_1', 'asv', 2.0, 104.0, 10));
     });
 
     expect(result.current.agents.size).toBe(1);
@@ -163,7 +165,7 @@ describe('useScenarioEditor — deleteAgent', () => {
     const { result } = renderHook(() => useScenarioEditor('s', { isNew: true }));
 
     act(() => {
-      result.current.addAgent('usv', 'vessel_1', { vesselName: 'vessel_1', geoPoint: { latitude: 1.0, longitude: 103.0, altitude: 0 }, heading: 0 }, '');
+      result.current.addAgent(makeAgent('vessel_1', 'usv', 1.0, 103.0, 0));
     });
     act(() => {
       result.current.deleteAgent('vessel_1');
@@ -183,7 +185,7 @@ describe('useScenarioEditor — deleteAgent', () => {
 
 describe('useScenarioEditor — save', () => {
   it('calls createScenario for a new unsaved scenario', async () => {
-    mockedApi.createScenario = vi.fn().mockResolvedValue({ success: true, message: 'ok' });
+    mockedApi.createScenario.mockResolvedValue({ success: true, message: 'ok' });
 
     const { result } = renderHook(() => useScenarioEditor('new-scenario', { isNew: true }));
 
@@ -194,11 +196,12 @@ describe('useScenarioEditor — save', () => {
     expect(mockedApi.createScenario).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'new-scenario' })
     );
+    expect(mockNavigate).toHaveBeenCalledWith('/scenarios');
   });
 
   it('calls updateScenario for an existing scenario', async () => {
-    mockedApi.getScenario = vi.fn().mockResolvedValue(mockScenario);
-    mockedApi.updateScenario = vi.fn().mockResolvedValue({ success: true, message: 'ok' });
+    mockedApi.getScenario.mockResolvedValue(mockScenario);
+    mockedApi.updateScenario.mockResolvedValue({ success: true, message: 'ok' });
 
     const { result } = renderHook(() => useScenarioEditor('test-scenario'));
     await act(async () => {});
@@ -214,7 +217,7 @@ describe('useScenarioEditor — save', () => {
   });
 
   it('sets error when save fails', async () => {
-    mockedApi.createScenario = vi.fn().mockRejectedValue(new Error('Network error'));
+    mockedApi.createScenario.mockRejectedValue(new Error('Network error'));
 
     const { result } = renderHook(() => useScenarioEditor('new-scenario', { isNew: true }));
 
@@ -223,15 +226,16 @@ describe('useScenarioEditor — save', () => {
     });
 
     expect(result.current.error).toBe('Failed to save scenario.');
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it('serialises agents as a plain object in the payload', async () => {
-    mockedApi.createScenario = vi.fn().mockResolvedValue({ success: true, message: 'ok' });
+    mockedApi.createScenario.mockResolvedValue({ success: true, message: 'ok' });
 
     const { result } = renderHook(() => useScenarioEditor('s', { isNew: true }));
 
     act(() => {
-      result.current.addAgent('usv', 'v1', { vesselName: 'v1', geoPoint: { latitude: 1.0, longitude: 103.0, altitude: 0 }, heading: 0 }, '');
+      result.current.addAgent(makeAgent('v1', 'usv', 1.0, 103.0, 0));
     });
 
     await act(async () => {
