@@ -26,12 +26,13 @@
  */
 
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { MapContainer, TileLayer, LayersControl, useMapEvent, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, LayersControl, useMapEvent, useMap, Polyline } from 'react-leaflet';
 import type L from 'leaflet';
 import { Fab, Box, Typography } from '@mui/material';
 import AddLocationAltIcon from '@mui/icons-material/AddLocationAlt';
 import CheckIcon from '@mui/icons-material/Check';
 import CloseIcon from '@mui/icons-material/Close';
+import { getVesselTrailColor } from './MapMarker';
 
 const FlyToController: React.FC<{ target: [number, number] | null }> = ({ target }) => {
   const map = useMap();
@@ -59,6 +60,7 @@ interface MapProps {
   removeVesselFn?: (vesselName: string) => void;
   flyTo?: [number, number] | null;
   onWaypointPickModeChange?: (active: boolean) => void;
+  trails?: Map<string, [number, number][]>;
 }
 
 type WaypointPickData = {
@@ -83,6 +85,7 @@ export const Map = forwardRef<MapHandle, MapProps>(({
   removeVesselFn,
   flyTo,
   onWaypointPickModeChange,
+  trails,
 }, ref) => {
   const [currentZoom, setCurrentZoom] = useState(zoom);
 
@@ -267,6 +270,20 @@ export const Map = forwardRef<MapHandle, MapProps>(({
             onRemove={removeVesselFn}
           />
         ))}
+
+        {trails && Array.from(trails.entries()).map(([name, points]) =>
+          points.length > 1 ? (
+            <Polyline
+              key={`trail-${name}`}
+              positions={points}
+              pathOptions={{
+                color: getVesselTrailColor(name),
+                weight: 2,
+                dashArray: '4 6',
+              }}
+            />
+          ) : null
+        )}
 
         {contextMenuPosition && (
           <MapContextMenu

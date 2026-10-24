@@ -25,11 +25,30 @@ export interface GeoPoint {
   altitude: number;
 }
 
+export interface SensorSummary {
+  name: string;
+  type: string;
+}
+
+export interface PowerProviderStatus {
+  name: string;
+  type: string;
+  soc: number;
+  voltage: number;
+}
+
+export interface VesselPowerStatus {
+  activeProvider: string;
+  providers: PowerProviderStatus[];
+}
+
 export interface VesselPosition {
   vesselName: string;
   geoPoint?: GeoPoint;
   pose?: Pose;
   heading?: number;
+  sensors?: SensorSummary[];
+  power?: VesselPowerStatus | null;
 }
 
 export interface Vector3 {

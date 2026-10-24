@@ -103,6 +103,34 @@ export interface CreateScenarioRequest {
   };
 }
 
+interface RunningScenarioResponse {
+  success: boolean;
+  running: boolean;
+  scenario_name: string | null;
+}
+
+export const getRunningScenario = async (
+  instance: string
+): Promise<string | null> => {
+  if (!instance) throw new Error('Instance is required');
+
+  try {
+    const response = await axios.get<RunningScenarioResponse>(
+      `http://${currentIp}:${currentPort}/instance/${instance}/running-scenario`
+    );
+
+    return response.data.running
+      ? response.data.scenario_name
+      : null;
+  } catch (error) {
+    console.error(
+      `Error fetching running scenario for instance '${instance}':`,
+      error
+    );
+    return null;
+  }
+};
+
 export interface ScenarioResponse {
   success: boolean;
   message: string;

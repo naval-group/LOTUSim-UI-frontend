@@ -40,8 +40,12 @@ import {
   useMediaQuery,
   Typography,
   Divider,
+  Collapse,
+  LinearProgress,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import {
   saveAddress,
   getAddress,
@@ -57,8 +61,11 @@ interface SideBarProps {
   instances: string[];
   selectedInstance: string;
   setSelectedInstance: (instance: string) => void;
+  selectedScenario: string;
+  setSelectedScenario: (scenario: string) => void;
   vesselPositions: Map<string, VesselPosition>;
   onFlyTo: (coords: [number, number]) => void;
+  onClear?: () => void;
 }
 
 /**
@@ -72,23 +79,28 @@ interface SideBarProps {
  * @param instances - Array of available instance names.
  * @param selectedInstance - Currently selected instance.
  * @param setSelectedInstance - Callback to update the selected instance.
- *
+ * @param selectedScenario - Currently selected scenario.
+ * @param setSelectedScenario - Callback to update the selected scenario.
  */
 const SideBar: React.FC<SideBarProps> = ({
   scenarios,
   instances,
   selectedInstance,
   setSelectedInstance,
+  selectedScenario,
+  setSelectedScenario,
   vesselPositions,
   onFlyTo,
+  onClear,
 }) => {
-  const [selectedScenario, setSelectedScenario] = useState<string>('');
+  // const [selectedScenario, setSelectedScenario] = useState<string>('');  // comes rom HomeDashboard now
   const [ip, setIp] = useState<string>(getAddress().ip);
   const [port, setPort] = useState<number>(getAddress().port);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [expandedVessel, setExpandedVessel] = useState<string | null>(null);
   const { showError } = useToast();  
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // < 600px
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   /**
    * Handles changing the selected lotusim instance.
@@ -143,10 +155,18 @@ const SideBar: React.FC<SideBarProps> = ({
     if (!selectedInstance) return;
     try {
       const ok = await stopScenario(selectedInstance);
-      if (!ok) showError('Failed to stop scenario');
+      if (!ok){
+        showError('Failed to stop scenario');
+      } else {
+        onClear?.();
+      }
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to stop scenario');
     }
+  };
+
+  const toggleVesselExpanded = (name: string) => {
+    setExpandedVessel((prev) => (prev === name ? null : name));
   };
 
   const panelContent = (
@@ -185,21 +205,22 @@ const SideBar: React.FC<SideBarProps> = ({
         </Select>
       </FormControl>
 
-      <TextField
-        label="IP Address"
-        variant="outlined"
-        fullWidth
-        value={ip}
-        onChange={handleIpChange}
-      />
-
-      <TextField
-        label="Port"
-        variant="outlined"
-        fullWidth
-        value={port}
-        onChange={handlePortChange}
-      />
+      <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+        <TextField
+          label="IP Address"
+          variant="outlined"
+          value={ip}
+          onChange={handleIpChange}
+          sx={{ flex: 2 }}
+        />
+        <TextField
+          label="Port"
+          variant="outlined"
+          value={port}
+          onChange={handlePortChange}
+          sx={{ flex: 1 }}
+        />
+      </Box>
 
       <Button
         variant="contained"
@@ -210,7 +231,7 @@ const SideBar: React.FC<SideBarProps> = ({
         Save Address
       </Button>
 
-      <Box sx={{ height: 20 }} />
+      <Box sx={{ height: 2 }} />
 
       <FormControl fullWidth>
         <InputLabel id="scenario-select-label">Launch Scenario</InputLabel>
@@ -221,11 +242,13 @@ const SideBar: React.FC<SideBarProps> = ({
           onChange={handleScenarioChange}
           label="Launch Scenario"
         >
-          {scenarios?.length ?(scenarios.map((scenario, index) => (
-            <MenuItem key={index} value={scenario}>
-              {scenario}
-            </MenuItem>
-          ))) : (
+          {scenarios?.length ? (
+            scenarios.map((scenario, index) => (
+              <MenuItem key={index} value={scenario}>
+                {scenario}
+              </MenuItem>
+            ))
+          ) : (
             <MenuItem disabled>
               <em>No scenario available</em>
             </MenuItem>
@@ -233,25 +256,26 @@ const SideBar: React.FC<SideBarProps> = ({
         </Select>
       </FormControl>
 
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={handleLaunchSelectedScenario}
-        sx={{ width: '100%' }}
-      >
-        Launch Scenario
-      </Button>
+      <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleLaunchSelectedScenario}
+          sx={{ flex: 1 }}
+        >
+          Launch
+        </Button>
+        <Button
+          variant="outlined"
+          color="secondary"
+          onClick={handleClearSimulation}
+          sx={{ flex: 1 }}
+        >
+          Clear
+        </Button>
+      </Box>
 
-      <Button
-        variant="outlined"
-        color="secondary"
-        onClick={handleClearSimulation}
-        sx={{ width: '100%' }}
-      >
-        Clear Simulation
-      </Button>
-
-      <Box sx={{ height: 20 }} />
+      <Box sx={{ height: 2 }} />
 
       <Divider sx={{ width: '100%' }} />
 
@@ -266,7 +290,7 @@ const SideBar: React.FC<SideBarProps> = ({
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          gap: 1,
+          gap: 0.5,
         }}
       >
         {vesselPositions.size === 0 ? (
@@ -278,11 +302,38 @@ const SideBar: React.FC<SideBarProps> = ({
             const lat = vessel.geoPoint?.latitude;
             const lng = vessel.geoPoint?.longitude;
             const hasCoords = lat !== undefined && lng !== undefined;
+            const isExpanded = expandedVessel === name;
+
+            const sensors = vessel.sensors ?? [];
+            const powerProviders = (vessel.power?.providers ?? []).map((p) => ({
+              name: p.name,
+              type: p.type,
+              soc: p.soc * 100, // convert 0–1 fraction to a 0–100 percentage for display
+            }));
+
             return (
               <Box key={name} sx={{ display: 'flex', flexDirection: 'column' }}>
-                <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                  {name}
-                </Typography>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    py: 0.5,
+                    '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' },
+                  }}
+                  onClick={() => toggleVesselExpanded(name)}
+                >
+                  <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                    {name}
+                  </Typography>
+                  {isExpanded ? (
+                    <ExpandLessIcon fontSize="small" />
+                  ) : (
+                    <ExpandMoreIcon fontSize="small" />
+                  )}
+                </Box>
+
                 {hasCoords ? (
                   <Typography
                     variant="caption"
@@ -297,6 +348,62 @@ const SideBar: React.FC<SideBarProps> = ({
                     Position unavailable
                   </Typography>
                 )}
+
+                <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                  <Box
+                    sx={{
+                      mt: 1,
+                      mb: 1,
+                      pl: 1.5,
+                      borderLeft: '2px solid',
+                      borderColor: 'divider',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 1,
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>
+                        Sensors
+                      </Typography>
+                      {sensors.length === 0 ? (
+                        <Typography variant="caption" color="text.secondary">
+                          No sensors onboard
+                        </Typography>
+                      ) : (
+                        sensors.map((s) => (
+                          <Typography key={s.name} variant="caption" sx={{ display: 'block' }}>
+                            {s.name} ({s.type})
+                          </Typography>
+                        ))
+                      )}
+                    </Box>
+
+                    <Box>
+                      <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>
+                        Power
+                      </Typography>
+                      {powerProviders.length === 0 ? (
+                        <Typography variant="caption" color="text.secondary">
+                          No power data available
+                        </Typography>
+                      ) : (
+                        powerProviders.map((p) => (
+                          <Box key={p.name} sx={{ mb: 0.5 }}>
+                            <Typography variant="caption" sx={{ display: 'block' }}>
+                              {p.name} ({p.type}) — {p.soc.toFixed(0)}%
+                            </Typography>
+                            <LinearProgress
+                              variant="determinate"
+                              value={p.soc}
+                              sx={{ height: 4, borderRadius: 2 }}
+                            />
+                          </Box>
+                        ))
+                      )}
+                    </Box>
+                  </Box>
+                </Collapse>
               </Box>
             );
           })
@@ -349,7 +456,7 @@ const SideBar: React.FC<SideBarProps> = ({
       component={Paper}
       elevation={3}
       sx={{
-        width: { sm: '180px', md: '210px', lg: '240px' },
+        width: { sm: '240px', md: '280px', lg: '320px' },
         flexShrink: 0,
         backgroundColor: '#f4f4f4',
         overflow: 'auto',
