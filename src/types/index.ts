@@ -105,6 +105,21 @@ export interface RenderInterface {
   publishRender?: boolean;
 }
 
+export interface LogEntry {
+  timestamp: {
+    sec: number;
+    nanosec: number;
+  };
+  logger: string;
+  level: "info" | "error";
+  message: string;
+}
+
+export interface LogWebSocketMessage {
+  type: "log";
+  log: LogEntry;
+}
+
 export interface WaypointFollowerInterface {
   enabled: boolean;
   loop: boolean;

@@ -24,7 +24,7 @@
  */
 
 import { getAddress, getInstance } from './api';
-import { VesselPosition } from '../types';
+import { LogWebSocketMessage, VesselPosition } from '../types';
 
 /**
  * WebSocketClient
@@ -41,9 +41,11 @@ export class WebSocketClient {
   private ws: WebSocket | null = null;
 
   private vesselPositionCallback: (data: VesselPosition[]) => void;
+  private logCallback: (log: LogWebSocketMessage) => void;
 
-  constructor(vesselPositionCallback: (data: VesselPosition[]) => void) {
+  constructor(vesselPositionCallback: (data: VesselPosition[]) => void, logCallback: (log: LogWebSocketMessage) => void) {
     this.vesselPositionCallback = vesselPositionCallback;
+    this.logCallback = logCallback;
   }
 
   /**
@@ -112,9 +114,14 @@ export class WebSocketClient {
    */
   private handleMessage(event: MessageEvent): void {
     try {
-      const data: VesselPosition[] = JSON.parse(event.data);
-      if (Array.isArray(data) && data.every((item) => item.vesselName)) {
-        this.vesselPositionCallback(data);
+      const data = JSON.parse(event.data);
+      if (data?.type === 'log') {
+        this.logCallback(data as LogWebSocketMessage);
+        return;
+      }
+      const vesselData: VesselPosition[] = data;
+      if (Array.isArray(vesselData) && vesselData.every((item) => item.vesselName)) {
+        this.vesselPositionCallback(vesselData);
       } else {
         console.warn('Received unexpected data format:', data);
       }

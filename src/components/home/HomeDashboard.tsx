@@ -32,7 +32,8 @@ import SideBar from './Sidebar';
 import { listScenarios, listInstances, sendMASCommand, saveInstance } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { WebSocketClient } from '../../services/websocketClient';
-import { Agent, MASCmd, VesselPosition } from '../../types';
+import { Agent, LogEntry, LogWebSocketMessage, MASCmd, VesselPosition } from '../../types';
+import { LogPanel } from './LogPanel';
 
 /**
  * HomeDashboard Component
@@ -70,6 +71,7 @@ export const HomeDashboard: React.FC = () => {
   // TODO: remove the default lotusim instance selected
   const [selectedInstance, setSelectedInstance] = useState<string>('lotusim');
   const [flyTo, setFlyTo] = useState<[number, number] | null>(null);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const { showError } = useToast();
 
   /**
@@ -115,7 +117,12 @@ export const HomeDashboard: React.FC = () => {
   React.useEffect(() => {
     fetchData();
     if (!ws_client.current) {
-      ws_client.current = new WebSocketClient(updateVesselPosition);
+      ws_client.current = new WebSocketClient(
+        updateVesselPosition,
+        (logMessage: LogWebSocketMessage) => {
+          setLogs((prev) => [...prev, logMessage.log].slice(-200));
+        },
+      );
       ws_client.current.connect();
     }
     return () => {
@@ -197,6 +204,7 @@ export const HomeDashboard: React.FC = () => {
             flyTo={flyTo}
           />
         </Box>
+        <LogPanel logs={logs} />
       </div>
     </div>
   );
