@@ -32,7 +32,8 @@ import SideBar from './Sidebar';
 import { listScenarios, listInstances, sendMASCommand, saveInstance, getRunningScenario } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { WebSocketClient } from '../../services/websocketClient';
-import { Agent, MASCmd, VesselPosition } from '../../types';
+import { Agent, DiagnosticLog, DiagnosticStatusLevel, LogWebSocketMessage, MASCmd, VesselPosition } from '../../types';
+import { LogPanel } from './LogPanel';
 
 /**
  * HomeDashboard Component
@@ -49,6 +50,7 @@ import { Agent, MASCmd, VesselPosition } from '../../types';
  */
 
 const MAX_TRAIL_POINTS = 50;
+const SHOWN_LEVELS: number[] = [DiagnosticStatusLevel.OK, DiagnosticStatusLevel.ERROR];
 
 export const HomeDashboard: React.FC = () => {
   // Default map center in singapore port. To change based on scenario
@@ -71,6 +73,7 @@ export const HomeDashboard: React.FC = () => {
 
   const [selectedInstance, setSelectedInstance] = useState<string>('');
   const [flyTo, setFlyTo] = useState<[number, number] | null>(null);
+  const [logs, setLogs] = useState<DiagnosticLog[]>([]);
   const { showError } = useToast();
   const [selectedScenario, setSelectedScenario] = useState<string>('');
 
@@ -161,7 +164,13 @@ export const HomeDashboard: React.FC = () => {
     saveInstance(selectedInstance); // before connection, so client uses the right instance
     setVesselPosition(new Map()); // clear vessel data when switching instances
     setTrails(new Map());
-    const ws_client = new WebSocketClient(updateVesselPosition);
+    const ws_client = new WebSocketClient(
+      updateVesselPosition,
+      (logMessage: LogWebSocketMessage) => {
+        if (!SHOWN_LEVELS.includes(logMessage.log.status.level)) return;
+        setLogs((prev) => [...prev, logMessage.log].slice(-200));
+      },
+    );
     ws_client.connect();
     return () => {
       ws_client.disconnect();
@@ -260,6 +269,7 @@ export const HomeDashboard: React.FC = () => {
             flyTo={flyTo}
           />
         </Box>
+        <LogPanel logs={logs} onClear={() => setLogs([])} />
       </div>
     </div>
   );

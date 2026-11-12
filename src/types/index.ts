@@ -69,6 +69,32 @@ export interface Pose {
   orientation: Quaternion;
 }
 
+export interface Time {
+  sec: number;
+  nanosec: number;
+}
+
+export interface KeyValue {
+  key: string;
+  value: string;
+}
+
+export const DiagnosticStatusLevel = {
+  OK: 0,
+  WARN: 1,
+  ERROR: 2,
+  STALE: 3,
+} as const;
+
+// diagnostic_msgs/DiagnosticStatus
+export interface DiagnosticStatus {
+  level: number;
+  name: string;
+  message: string;
+  hardware_id: string;
+  values: KeyValue[];
+}
+
 export function radToDeg(radians: number): number {
   return radians * (180 / Math.PI);
 }
@@ -122,6 +148,16 @@ export interface RenderInterface {
   enabled: boolean;
   rendererType: string;
   publishRender?: boolean;
+}
+
+export interface DiagnosticLog {
+  stamp: Time;
+  status: DiagnosticStatus;
+}
+
+export interface LogWebSocketMessage {
+  type: 'log';
+  log: DiagnosticLog;
 }
 
 export interface WaypointFollowerInterface {
