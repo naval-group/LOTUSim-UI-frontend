@@ -189,10 +189,6 @@ export const HomeDashboard: React.FC = () => {
       modelName: agent.model,
       vesselName:agent.name,
       entity: 0, // Placeholder. Not used
-      vesselPosition: { // Placeholder. Not used
-        position: { x: 0, y: 0, z: 0 },
-        orientation: { x: 0, y: 0, z: 0, w: 1 },
-      },
       geoPoint: {
         latitude: agent.position.latitude ?? 0,
         longitude: agent.position.longitude ?? 0,

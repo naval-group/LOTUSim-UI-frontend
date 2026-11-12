@@ -20,7 +20,7 @@
  * Features:
  * - Renders a custom divIcon styled as a blue arrow.
  * - Scales icon size relative to current map zoom level.
- * - Rotates icon according to vessel heading (pose).
+ * - Rotates icon according to vessel heading (degrees from true North, clockwise).
  * - Displays a popup with vessel name, coordinates, and optional info.
  *
  */
@@ -56,6 +56,11 @@ const getDomainOutlineColor = (altitude?: number | null): string => {
 const formatCoordinate = (value?: number | null): string => {
   if (value == null) return 'N/A';
   return `${value >= 0 ? '+' : ''}${value.toFixed(3)}°`;
+};
+
+const formatHeading = (value?: number | null): string => {
+  if (value == null) return 'N/A';
+  return `${value.toFixed(1)}°`;
 };
 
 const formatAltitude = (value?: number | null): string => {
@@ -153,7 +158,7 @@ export const VesselMarkerComponent: React.FC<{
           <span>{formatAltitude(vessel.geoPoint.altitude)}</span>
 
           <span>Heading:</span>
-          <span>{formatCoordinate(vessel.heading)}</span>
+          <span>{formatHeading(vessel.heading)}</span>
 
           {onRemove && (
             <button
