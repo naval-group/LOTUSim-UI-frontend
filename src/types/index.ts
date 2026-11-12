@@ -45,7 +45,7 @@ export interface VesselPowerStatus {
 export interface VesselPosition {
   vesselName: string;
   geoPoint?: GeoPoint;
-  pose?: Pose;
+  /** Where the bow points, degrees from true North, clockwise. */
   heading?: number;
   sensors?: SensorSummary[];
   power?: VesselPowerStatus | null;
@@ -83,8 +83,9 @@ export interface MASCmd {
   modelName?: string;
   vesselName?: string;
   entity?: number;
-  vesselPosition?: Pose;
+  /** Create / move: latitude and longitude in degrees, altitude in metres from sea level. */
   geoPoint?: GeoPoint;
+  /** Create / move: where the bow points, degrees from true North, clockwise. */
   heading?: number;
 }
 
