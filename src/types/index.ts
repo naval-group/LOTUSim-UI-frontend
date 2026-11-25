@@ -14,8 +14,9 @@
  * ************************************************************************************
  *
  * This module contains TypeScript interfaces and utility functions used for:
- * - Vessel and position data (`GeoPoint`, `VesselPosition`, `Pose`, etc.)
- * - Utility functions such as `radToDeg` for angle conversion.
+ * - Vessel and position data (`GeoPoint`, `VesselPosition`)
+ * - MAS command structures (`MASCmd`, `MASCmdArray`)
+ * - Pose and Quaternion is for the model editors
  *
  */
 
@@ -45,7 +46,7 @@ export interface VesselPowerStatus {
 export interface VesselPosition {
   vesselName: string;
   geoPoint?: GeoPoint;
-  pose?: Pose;
+  /** Where the bow points, degrees from true North, clockwise. */
   heading?: number;
   sensors?: SensorSummary[];
   power?: VesselPowerStatus | null;
@@ -95,10 +96,6 @@ export interface DiagnosticStatus {
   values: KeyValue[];
 }
 
-export function radToDeg(radians: number): number {
-  return radians * (180 / Math.PI);
-}
-
 /**
  * LOTUSim based ROS 2 messages
  */
@@ -109,8 +106,9 @@ export interface MASCmd {
   modelName?: string;
   vesselName?: string;
   entity?: number;
-  vesselPosition?: Pose;
+  /** Create / move: latitude and longitude in degrees, altitude in metres from sea level. */
   geoPoint?: GeoPoint;
+  /** Create / move: where the bow points, degrees from true North, clockwise. */
   heading?: number;
 }
 
@@ -132,6 +130,9 @@ export enum DomainType {
   Underwater = 'UNDERWATER',
   Aerial = 'AERIAL',
 }
+
+export const wrapLongitude = (lng: number): number => ((((lng + 180) % 360) + 360) % 360) - 180;
+export const wrapHeading = (degrees: number): number => ((degrees % 360) + 360) % 360;
 
 export interface PhysicsDomainConfig {
   domain: DomainType;

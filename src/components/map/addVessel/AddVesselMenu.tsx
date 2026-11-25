@@ -32,6 +32,8 @@ import {
   PhysicsInterface,
   RenderInterface,
   WaypointFollowerInterface,
+  wrapLongitude,
+  wrapHeading,
 } from '../../../types';
 import { listModels } from '../../../services/api';
 import { PhysicsMode, PhysicsModeConfig, PhysicsConfig, PhysicsModes } from './generateLotusParamXML';
@@ -105,6 +107,17 @@ const SelectField = ({
   </FormControl>
 );
 
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+const positionError = (d: AgentDraft): string | null => {
+  const { latitude, longitude, altitude } = d.position;
+  if (![latitude, longitude, altitude, d.heading].every(isNum)) {
+    return 'Latitude, longitude, altitude and heading must be numbers.';
+  }
+  if (Math.abs(latitude) > 90) return 'Latitude must be between -90 and 90.';
+  return null;
+};
+
 const PositionFields = ({
   position,
   onChange,
@@ -155,7 +168,7 @@ export const AddVesselMenu: React.FC<AddVesselMenuProps> = ({
   initialAgent,
   onEnterWaypointPickMode,
 }) => {
-  const [formErrors, setFormErrors] = useState<{ model?: string; vesselName?: string }>({});
+  const [formErrors, setFormErrors] = useState<{ model?: string; vesselName?: string; position?: string }>({});
   const [modelList, setModelList] = useState<string[]>([]);
   const [draft, setDraft] = useState<AgentDraft>(() => ({
     name: initialAgent?.name ?? '',
@@ -220,6 +233,7 @@ export const AddVesselMenu: React.FC<AddVesselMenuProps> = ({
     e: React.ChangeEvent<HTMLInputElement>,
     field: keyof GeoPoint | 'heading'
   ) => {
+    setFormErrors((prev) => ({ ...prev, position: undefined })); // clear msg
     const input = e.target.value;
     const partial = input === '' || input === '-' || input === '.' || input === '-.';
     const num = parseFloat(input);
@@ -309,12 +323,22 @@ export const AddVesselMenu: React.FC<AddVesselMenuProps> = ({
   };
 
   const handleAddVessel = () => {
-    const errors: { model?: string; vesselName?: string } = {};
+    const errors: { model?: string; vesselName?: string; position?: string } = {};
     if (!draft.model) errors.model = 'Model is required';
     if (!draft.name.trim()) errors.vesselName = 'Vessel name is required';
+
+    const positionErr = positionError(draft);
+    if (positionErr) errors.position = positionErr;
+
     if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
     setFormErrors({});
-    onAddVessel(new Agent(draft));
+    onAddVessel(
+      new Agent({
+        ...draft,
+        position: { ...draft.position, longitude: wrapLongitude(draft.position.longitude) },
+        heading: wrapHeading(draft.heading),
+      })
+    );
     onClose();
   };
 
@@ -357,6 +381,11 @@ export const AddVesselMenu: React.FC<AddVesselMenuProps> = ({
           Position
         </Typography>
         <PositionFields position={vesselPosition} onChange={handlePositionChange} />
+        {formErrors.position && (
+          <FormHelperText error sx={{ mt: -1, mb: 1 }}>
+            {formErrors.position}
+          </FormHelperText>
+        )}
 
         <Typography variant="h6" fontWeight="bold" mt={3} mb={1}>
           Lotusim Plugin Params

@@ -32,7 +32,7 @@ import SideBar from './Sidebar';
 import { listScenarios, listInstances, sendMASCommand, saveInstance, getRunningScenario } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { WebSocketClient } from '../../services/websocketClient';
-import { Agent, DiagnosticLog, LogWebSocketMessage, MASCmd, VesselPosition } from '../../types';
+import { Agent, DiagnosticLog, LogWebSocketMessage, MASCmd, VesselPosition, wrapHeading, wrapLongitude } from '../../types';
 import { LogPanel } from './LogPanel';
 
 /**
@@ -197,22 +197,22 @@ export const HomeDashboard: React.FC = () => {
       showError('No instance selected.');
       return;
     }
+    if (![agent.position.latitude, agent.position.longitude, agent.position.altitude, agent.heading].every(Number.isFinite)) {
+      showError(`Vessel ${agent.name} has an invalid position or heading.`);
+      return;
+    }
     const cmd: MASCmd = {
       cmdType: 0,
       sdfString: agent.generateLotusParamXML(),
       modelName: agent.model,
       vesselName:agent.name,
       entity: 0, // Placeholder. Not used
-      vesselPosition: { // Placeholder. Not used
-        position: { x: 0, y: 0, z: 0 },
-        orientation: { x: 0, y: 0, z: 0, w: 1 },
-      },
       geoPoint: {
-        latitude: agent.position.latitude ?? 0,
-        longitude: agent.position.longitude ?? 0,
-        altitude: agent.position.altitude ?? 0,
+        latitude: agent.position.latitude,
+        longitude: wrapLongitude(agent.position.longitude),
+        altitude: agent.position.altitude,
       },
-      heading: agent.heading ?? 0,
+      heading: wrapHeading(agent.heading),
     };
 
     try {
